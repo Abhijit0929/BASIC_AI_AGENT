@@ -20,10 +20,15 @@ while True:
         print("🤖 Goodbye!")
         break
     
-    chat_history.append(HumanMessage(content=user_input))
+    chat_history.append(HumanMessage(content=user_input))  # Add user message to chat history
     
 
     response = llm.invoke(chat_history)
     
-    chat_history.append(AIMessage(content=response.content))
+    chat_history.append(AIMessage(content=response.content)) # Add Gemini's response to chat history
     print("Gemini:", response.content)
+    
+    # file save as chat_history.txt
+    with open("chat_history,txt", "a", encoding="utf-8") as f:
+        f.write(f"You: {user_input}\n")
+        f.write(f"Agent: {response.content}\n")
