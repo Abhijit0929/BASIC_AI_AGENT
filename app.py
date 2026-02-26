@@ -1,4 +1,6 @@
 import streamlit as st
+import os 
+import requests
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage
@@ -26,7 +28,9 @@ st.title("🤖 AI Agent Suite")
 # -----------------------------------
 # Tabs (MAIN FEATURE)
 # -----------------------------------
-tab1, tab2 = st.tabs(["📄 PDF AI Agent", "✈️ Trip Planner Agent"])
+tab1, tab2, tab3 = st.tabs(
+    ["📄 PDF AI Agent", "✈️ Trip Planner Agent", "🎬 Movie Agent"]
+)
 
 # =====================================================
 # 📄 TAB 1 — PDF ANALYSIS AGENT
@@ -213,3 +217,118 @@ FINAL ITINERARY:
             st.write(st.session_state.final_plan)
         else:
             st.info("Generate a trip to see itinerary.")
+  
+  
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+
+def get_movie_poster(movie_name):
+    url = "https://api.themoviedb.org/3/search/movie"
+
+    params = {
+        "api_key": TMDB_API_KEY,
+        "query": movie_name
+    }
+
+    response = requests.get(url, params=params).json()
+
+    if response["results"]:
+        poster_path = response["results"][0]["poster_path"]
+        rating = response["results"][0]["vote_average"]
+
+        if poster_path:
+            poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}"
+            return poster_url, rating
+
+    return None, None          
+            
+# =====================================================
+# 🎬 TAB 3 — MOVIE SUGGESTION AGENT
+# =====================================================
+with tab3:
+
+    st.header("🎬 Movie Suggestion AI Agent")
+
+    if "movie_results" not in st.session_state:
+        st.session_state.movie_results = ""
+
+    # Movie Agent Function
+    def movie_agent(genre, mood, language, min_rating):
+        prompt = f"""
+Suggest 5 movies.
+
+Genre: {genre}
+Mood: {mood}
+Language: {language}
+Minimum IMDb Rating: {min_rating}
+
+Return ONLY movie names separated by commas.
+    """ 
+        response = llm.invoke(prompt)
+        return response.content
+
+    # UI Layout
+    colA, colB = st.columns([1,2])
+
+    # LEFT — INPUTS
+    with colA:
+        st.subheader("🎥 Preferences")
+
+    # ---- Row 1 ----
+    c1, c2 = st.columns(2)
+
+    with c1:
+        genre = st.selectbox(
+            "Genre",
+            ["Action", "Comedy", "Sci-Fi", "Romance", "Thriller", "Horror", "Drama"]
+        )
+
+    with c2:
+        mood = st.selectbox(
+            "Mood",
+            ["Happy", "Excited", "Emotional", "Relaxed", "Dark", "Motivational"]
+        )
+
+    # ---- Row 2 ----
+    c3, c4 = st.columns(2)
+
+    with c3:
+        language = st.selectbox(
+            "Language",
+            ["English", "Hindi", "Marathi", "Japanese"]
+        )
+
+    with c4:
+        min_rating = st.slider(
+            "Minimum IMDb Rating",
+            5.0, 9.5, 7.0
+        )
+
+    # ---- Center Button ----
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    recommend_btn = st.button(
+        "🎬 Recommend Movies",
+        use_container_width=True
+    )
+
+    # RIGHT — RESULTS
+    if recommend_btn:
+        with st.spinner("Fetching movies..."):
+            movies_text = movie_agent(
+            genre, mood, language, min_rating
+        )
+
+        movie_list = [m.strip() for m in movies_text.split(",")]
+
+        cols = st.columns(5)
+
+        for i, movie in enumerate(movie_list[:5]):
+
+            poster, rating = get_movie_poster(movie)
+
+            with cols[i]:
+                if poster:
+                    st.image(poster, use_container_width=True)
+                st.markdown(f"**{movie}**")
+                if rating:
+                    st.write(f"⭐ TMDB Rating: {rating}")
