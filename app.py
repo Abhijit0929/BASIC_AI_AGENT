@@ -332,3 +332,5 @@ Return ONLY movie names separated by commas.
                 st.markdown(f"**{movie}**")
                 if rating:
                     st.write(f"⭐ TMDB Rating: {rating}")
+
+
